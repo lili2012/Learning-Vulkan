@@ -57,11 +57,9 @@ endif()
 # Specify a suitable project name
 project(${Recipe_Name})
 
-# Add any required preprocessor definitions here
-add_definitions(-DVK_USE_PLATFORM_WIN32_KHR)
 
-# vulkan-1 library for build Vulkan application.
-set(VULKAN_LIB_LIST "vulkan-1")
+
+
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
 	# Include Vulkan header files from Vulkan SDK
@@ -71,9 +69,17 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
 	link_directories(${VULKAN_PATH}/Bin;${VULKAN_PATH}/Lib;)
 endif()
 
+if(UNIX)
+	set(VULKAN_LIB_LIST "vulkan")
+
+endif(UNIX)
 
 # Define directories and the contained folder and files inside.
 if(WIN32)
+	# vulkan-1 library for build Vulkan application.
+	set(VULKAN_LIB_LIST "vulkan-1")
+	# Add any required preprocessor definitions here
+	add_definitions(-DVK_USE_PLATFORM_WIN32_KHR)
     source_group("include" REGULAR_EXPRESSION "include/*")
     source_group("source" REGULAR_EXPRESSION "source/*")
 endif(WIN32)

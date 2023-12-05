@@ -26,9 +26,21 @@
 #include "Headers.h"
 #include "VulkanApplication.h"
 
+#if defined (_WIN32)
+    #include <vulkan/vulkan_win32.h>
+#elif defined(__linux__)
+    #include <vulkan/vulkan_xcb.h>
+#elif defined(__ANDROID__)
+    #include <vulkan/vulkan_android.h>
+#endif
+
 std::vector<const char *> instanceExtensionNames = {
 	VK_KHR_SURFACE_EXTENSION_NAME,
-	VK_KHR_WIN32_SURFACE_EXTENSION_NAME
+	#if defined (_WIN32)
+    	VK_KHR_WIN32_SURFACE_EXTENSION_NAME
+	#elif defined(__linux__)
+    	VK_KHR_XCB_SURFACE_EXTENSION_NAME
+	#endif
 };
 
 std::vector<const char *> layerNames = {
