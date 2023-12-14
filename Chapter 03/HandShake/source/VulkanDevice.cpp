@@ -26,7 +26,6 @@
 #include "VulkanDevice.h"
 #include "VulkanInstance.h"
 #include "VulkanApplication.h"
-#include "DataStructures.h"
 
 VulkanDevice::VulkanDevice(VkPhysicalDevice* physicalDevice) 
 {

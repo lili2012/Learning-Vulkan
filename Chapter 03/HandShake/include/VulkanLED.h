@@ -26,6 +26,11 @@
 #pragma once
 #include "Headers.h"
 
+/*
+* This structure stores the extensions of a given layer.
+* A layer can have one or more extensions.
+* Use this structure keep track of those extensions here.
+*/
 struct LayerProperties{
 	VkLayerProperties properties;
 	std::vector<VkExtensionProperties> extensions;
