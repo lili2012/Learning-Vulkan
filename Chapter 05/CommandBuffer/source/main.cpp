@@ -28,7 +28,11 @@
 
 std::vector<const char *> instanceExtensionNames = {
 	VK_KHR_SURFACE_EXTENSION_NAME,
-	VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
+	#if defined (_WIN32)
+    	VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
+	#elif defined(__linux__)
+    	VK_KHR_XCB_SURFACE_EXTENSION_NAME,
+	#endif
 	VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
 };
 

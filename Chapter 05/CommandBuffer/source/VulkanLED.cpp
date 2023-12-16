@@ -25,6 +25,8 @@
 
 #include "VulkanLED.h"
 #include "VulkanApplication.h"
+#include <string.h>
+#include <algorithm>
 
 VulkanLayerAndExtension::VulkanLayerAndExtension()
 {
