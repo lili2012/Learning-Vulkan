@@ -2,22 +2,12 @@
 # Chapter 4 - Debugging in Vulkan.
 #
 
-cmake_minimum_required(VERSION 3.20.1)
-
+cmake_minimum_required(VERSION 3.26.4)
 set(Recipe_Name "4_0_DebugVulkan")
-
-
-	# Find Vulkan Path using CMake's Vulkan Module
-	# This will return Boolean 'Vulkan_FOUND' indicating the status of find as success(ON) or fail(OFF).
-	# Include directory path - 'Vulkan_INCLUDE_DIRS' and 'Vulkan_LIBRARY' with required libraries.
-get_property(importTargets DIRECTORY "${CMAKE_SOURCE_DIR}" PROPERTY IMPORTED_TARGETS)
-	find_package(Vulkan)
-	get_property(importTargetsAfter DIRECTORY "${CMAKE_SOURCE_DIR}" PROPERTY IMPORTED_TARGETS)
-list(REMOVE_ITEM importTargetsAfter ${importTargets})
-message("${importTargetsAfter}")
-
 # Specify a suitable project name
-project(${Recipe_Name})
+project(${Recipe_Name} C CXX)
+
+find_package(Vulkan)
 
 # Define directories and the contained folder and files inside.
 if(WIN32)
@@ -38,11 +28,6 @@ target_include_directories(${Recipe_Name} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/in
 
 # Link the debug and release libraries to the project
 target_link_libraries( ${Recipe_Name} Vulkan::Vulkan)
-
-if(WIN32)
-	# vulkan-1 library for build Vulkan application.
-	target_link_libraries( ${Recipe_Name} "vulkan-1")
-endif(WIN32)
 
 # Define project properties
 set_property(TARGET ${Recipe_Name} PROPERTY RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/binaries)
