@@ -44,7 +44,7 @@ void CommandBufferMgr::allocCommandBuffer(const VkDevice* device, const VkComman
 	cmdInfo.pNext		= NULL;
 	cmdInfo.commandPool = cmdPool;
 	cmdInfo.level		= VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	cmdInfo.commandBufferCount = (uint32_t) sizeof(cmdBuf) / sizeof(VkCommandBuffer);;
+	cmdInfo.commandBufferCount = 1;
 
 	result = vkAllocateCommandBuffers(*device, &cmdInfo, cmdBuf);
 	assert(!result);
