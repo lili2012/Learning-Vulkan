@@ -2,19 +2,19 @@
 # Chapter 6 - SwapChain
 #
 
-cmake_minimum_required(VERSION 3.7.1)
-
+cmake_minimum_required(VERSION 3.25.1)
 set(Recipe_Name "6_0_SwapChain")
+project(${Recipe_Name} C CXX)
 
 get_property(importTargets DIRECTORY "${CMAKE_SOURCE_DIR}" PROPERTY IMPORTED_TARGETS)
 	find_package(Vulkan)
+	set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} /usr/lib/x86_64-linux-gnu/)
+	set(CMAKE_INCLUDE_PATH ${CMAKE_INCLUDE_PATH} /usr/include/)
+
+	find_package(X11 REQUIRED)
 	get_property(importTargetsAfter DIRECTORY "${CMAKE_SOURCE_DIR}" PROPERTY IMPORTED_TARGETS)
 list(REMOVE_ITEM importTargetsAfter ${importTargets})
 message("${importTargetsAfter}")
-
-
-# Specify a suitable project name
-project(${Recipe_Name})
 
 # Define directories and the contained folder and files inside.
 if(WIN32)
@@ -36,10 +36,9 @@ target_include_directories(${Recipe_Name} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/in
 # Link the debug and release libraries to the project
 target_link_libraries( ${Recipe_Name} Vulkan::Vulkan)
 
-if(WIN32)
-	# vulkan-1 library for build Vulkan application.
-	target_link_libraries( ${Recipe_Name} "vulkan-1")
-endif(WIN32)
+if(linux)
+	target_link_libraries( ${Recipe_Name} X11::xcb)
+endif(linux)
 
 # Define project properties
 set_property(TARGET ${Recipe_Name} PROPERTY RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/binaries)
