@@ -25,6 +25,8 @@
 
 #include "VulkanLED.h"
 #include "VulkanApplication.h"
+#include <string.h>
+#include <algorithm>
 
 VulkanLayerAndExtension::VulkanLayerAndExtension()
 {
@@ -77,8 +79,8 @@ VkResult VulkanLayerAndExtension::getInstanceLayerProperties()
 		}
 
 		layerPropertyList.push_back(layerProps);
-
-		for (auto j : layerProps.extensions){
+		// Print extension name for each instance layer
+		for (auto j : layerProps.extensions) {
 			std::cout << "\t\t|\n\t\t|---[Layer Extension]--> " << j.extensionName << "\n";
 		}
 	}
@@ -159,34 +161,6 @@ void VulkanLayerAndExtension::destroyDebugReportCallback()
 	dbgDestroyDebugReportCallback(instance, debugReportCallback, NULL);
 }
 
-VKAPI_ATTR VkBool32 VKAPI_CALL
-VulkanLayerAndExtension::debugFunction(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
-	uint64_t srcObject, size_t location, int32_t msgCode,
-	const char *layerPrefix, const char *msg, void *userData) {
-
-	if (msgFlags & VK_DEBUG_REPORT_ERROR_BIT_EXT) {
-		std::cout << "[VK_DEBUG_REPORT] ERROR: [" << layerPrefix << "] Code" << msgCode << ":" << msg << std::endl;
-	}
-	else if (msgFlags & VK_DEBUG_REPORT_WARNING_BIT_EXT) {
-		std::cout << "[VK_DEBUG_REPORT] WARNING: [" << layerPrefix << "] Code" << msgCode << ":" << msg << std::endl;
-	}
-	else if (msgFlags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT) {
-		std::cout << "[VK_DEBUG_REPORT] INFORMATION: [" << layerPrefix << "] Code" << msgCode << ":" << msg << std::endl;
-	}
-	else if (msgFlags & VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT) {
-		std::cout << "[VK_DEBUG_REPORT] PERFORMANCE: [" << layerPrefix << "] Code" << msgCode << ":" << msg << std::endl;
-	}
-	else if (msgFlags & VK_DEBUG_REPORT_DEBUG_BIT_EXT) {
-		std::cout << "[VK_DEBUG_REPORT] DEBUG: [" << layerPrefix << "] Code" << msgCode << ":" << msg << std::endl;
-	}
-	else {
-		return VK_FALSE;
-	}
-
-	fflush(stdout);
-	return VK_TRUE;
-}
-
 /*
 Inspects the incoming layer names against system supported layers, theses layers are not supported
 then this function removed it from layerNames allow
@@ -246,16 +220,7 @@ VkResult VulkanLayerAndExtension::createDebugReportCallback()
 	}
 	std::cout << "GetInstanceProcAddr loaded dbgDestroyDebugReportCallback function\n";
 
-	// Define the debug report control structure, provide the reference of 'debugFunction'
-	// , this function prints the debug information on the console.
-	dbgReportCreateInfo.sType		= VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
-	dbgReportCreateInfo.pfnCallback = debugFunction;
-	dbgReportCreateInfo.pUserData	= NULL;
-	dbgReportCreateInfo.pNext		= NULL;
-	dbgReportCreateInfo.flags		= VK_DEBUG_REPORT_WARNING_BIT_EXT |
-									  VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT |
-									  VK_DEBUG_REPORT_ERROR_BIT_EXT |
-									  VK_DEBUG_REPORT_DEBUG_BIT_EXT;
+
 
 	// Create the debug report callback and store the handle into 'debugReportCallback'
 	result = dbgCreateDebugReportCallback(*instance, &dbgReportCreateInfo, NULL, &debugReportCallback);
