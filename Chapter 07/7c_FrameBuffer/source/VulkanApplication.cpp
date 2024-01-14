@@ -102,6 +102,24 @@ VkResult VulkanApplication::handShakeWithDevice(VkPhysicalDevice* gpu, std::vect
 	return deviceObj->createDevice(layers, extensions);
 }
 
+//https://gamedev.stackexchange.com/questions/124738/how-to-select-the-most-powerful-vkdevice
+static int getMostPowerfullDevice(const std::vector<VkPhysicalDevice>& gpuList){
+	for (int i =0; i < gpuList.size(); i++)
+	{
+		const auto& device = gpuList[i];
+		auto props = VkPhysicalDeviceProperties{};
+		vkGetPhysicalDeviceProperties(device, &props);
+
+		// Determine the type of the physical device
+		if (props.deviceType == VkPhysicalDeviceType::VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
+		{
+			// You've got yourself a discrete GPU. (ideal)
+			return i;
+		}
+	}
+	return 0;
+}
+
 VkResult VulkanApplication::enumeratePhysicalDevices(std::vector<VkPhysicalDevice>& gpuList)
 {
 	uint32_t gpuDeviceCount;
@@ -138,10 +156,11 @@ void VulkanApplication::initialize()
 	std::vector<VkPhysicalDevice> gpuList;
 	enumeratePhysicalDevices(gpuList);
 
+	if(gpuList.size() == 0)
+		return;
 	// This example use only one device which is available first.
-	if (gpuList.size() > 0) {
-		handShakeWithDevice(&gpuList[0], layerNames, deviceExtensionNames);
-	}
+	int device = getMostPowerfullDevice(gpuList);
+	handShakeWithDevice(&gpuList[device], layerNames, deviceExtensionNames);
 
 	rendererObj = new VulkanRenderer(this, deviceObj);
 
