@@ -140,7 +140,7 @@ void VulkanShader::buildShader(const char *vertShaderText, const char *fragShade
 //
 bool VulkanShader::GLSLtoSPV(const VkShaderStageFlagBits shaderType, const char *pshader, std::vector<unsigned int> &spirv)
 {
-	glslang::TProgram* program = new glslang::TProgram;
+	glslang::TProgram program;
 	const char *shaderStrings[1];
 	TBuiltInResource Resources;
 	initializeResources(Resources);
@@ -149,29 +149,27 @@ bool VulkanShader::GLSLtoSPV(const VkShaderStageFlagBits shaderType, const char 
 	EShMessages messages = (EShMessages)(EShMsgSpvRules | EShMsgVulkanRules);
 
 	EShLanguage stage = getLanguage(shaderType);
-	glslang::TShader* shader = new glslang::TShader(stage);
+	glslang::TShader shader(stage);
 
 	shaderStrings[0] = pshader;
-	shader->setStrings(shaderStrings, 1);
+	shader.setStrings(shaderStrings, 1);
 
-	if (!shader->parse(&Resources, 100, false, messages)) {
-		puts(shader->getInfoLog());
-		puts(shader->getInfoDebugLog());
+	if (!shader.parse(&Resources, 100, false, messages)) {
+		puts(shader.getInfoLog());
+		puts(shader.getInfoDebugLog());
 		return false;
 	}
 
-	program->addShader(shader);
+	program.addShader(&shader);
 
 	// Link the program and report if errors...
-	if (!program->link(messages)) {
-		puts(shader->getInfoLog());
-		puts(shader->getInfoDebugLog());
+	if (!program.link(messages)) {
+		puts(shader.getInfoLog());
+		puts(shader.getInfoDebugLog());
 		return false;
 	}
 
-	glslang::GlslangToSpv(*program->getIntermediate(stage), spirv);
-	delete program;
-	delete shader;
+	glslang::GlslangToSpv(*program.getIntermediate(stage), spirv);
 	return true;
 }
 
