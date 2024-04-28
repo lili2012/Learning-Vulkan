@@ -28,18 +28,17 @@
 
 std::vector<const char *> instanceExtensionNames = {
 	VK_KHR_SURFACE_EXTENSION_NAME,
-	VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
-	VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
+	#if defined (_WIN32)
+    	VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
+	#elif defined(__linux__)
+    	VK_KHR_XCB_SURFACE_EXTENSION_NAME,
+	#endif
+	VK_EXT_DEBUG_REPORT_EXTENSION_NAME
 };
 
 std::vector<const char *> layerNames = {
-	"VK_LAYER_GOOGLE_threading",     
-	"VK_LAYER_LUNARG_parameter_validation",
-	"VK_LAYER_LUNARG_object_tracker",
-	"VK_LAYER_LUNARG_image",         
-	"VK_LAYER_LUNARG_core_validation",
-	"VK_LAYER_GOOGLE_unique_objects" 
-//VK_LAYER_LUNARG_standard_validation    
+	"VK_LAYER_LUNARG_api_dump",     
+	"VK_LAYER_KHRONOS_validation"   
 };
 
 std::vector<const char *> deviceExtensionNames = {

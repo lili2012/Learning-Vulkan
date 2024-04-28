@@ -24,7 +24,7 @@
 */
 
 #include "VulkanDrawable.h"
-
+#include "string.h"
 #include "VulkanApplication.h"
 #include "VulkanRenderer.h"
 #include "Wrappers.h"
