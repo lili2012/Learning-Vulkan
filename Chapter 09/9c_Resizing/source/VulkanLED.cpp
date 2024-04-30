@@ -89,7 +89,7 @@ VkResult VulkanLayerAndExtension::getInstanceLayerProperties()
 * Get the device extensions
 */
  
-VkResult VulkanLayerAndExtension::getDeviceExtensionProperties(VkPhysicalDevice* gpu)
+VkResult VulkanLayerAndExtension::getDeviceExtensionProperties(VkPhysicalDevice gpu)
 {
 	VkResult						result;					// Variable to check Vulkan API result status
 
@@ -124,7 +124,7 @@ VkResult VulkanLayerAndExtension::getDeviceExtensionProperties(VkPhysicalDevice*
 // and device level. Pass a valid physical device
 // pointer to retrieve device level extensions, otherwise
 // use NULL to retrieve extension specific to instance level.
-VkResult VulkanLayerAndExtension::getExtensionProperties(LayerProperties &layerProps, VkPhysicalDevice* gpu)
+VkResult VulkanLayerAndExtension::getExtensionProperties(LayerProperties &layerProps, VkPhysicalDevice gpu)
 {
 	uint32_t	extensionCount;								 // Stores number of extension per layer
 	VkResult	result;										 // Variable to check Vulkan API result status
@@ -133,7 +133,7 @@ VkResult VulkanLayerAndExtension::getExtensionProperties(LayerProperties &layerP
 	do {
 		// Get the total number of extension in this layer
 		if(gpu)
-			result = vkEnumerateDeviceExtensionProperties(*gpu, layerName, &extensionCount, NULL);
+			result = vkEnumerateDeviceExtensionProperties(gpu, layerName, &extensionCount, NULL);
 		else
 			result = vkEnumerateInstanceExtensionProperties(layerName, &extensionCount, NULL);
 
@@ -144,7 +144,7 @@ VkResult VulkanLayerAndExtension::getExtensionProperties(LayerProperties &layerP
 
 		// Gather all extension properties 
 		if (gpu)
-			result = vkEnumerateDeviceExtensionProperties(*gpu, layerName, &extensionCount, layerProps.extensions.data());
+			result = vkEnumerateDeviceExtensionProperties(gpu, layerName, &extensionCount, layerProps.extensions.data());
 		else
 			result = vkEnumerateInstanceExtensionProperties(layerName, &extensionCount, layerProps.extensions.data());
 	} while (result == VK_INCOMPLETE);

@@ -39,12 +39,12 @@ class VulkanApplication;
 // and work produced for a family of queues can be executed on any queue within that family
 class VulkanDevice{
 public:
-	VulkanDevice(VkPhysicalDevice* gpu);
+	VulkanDevice(VkPhysicalDevice gpu);
 	~VulkanDevice();
 
 public:
     VkDevice							device;		// Logical device
-	VkPhysicalDevice*					gpu;		// Physical device
+	VkPhysicalDevice					gpu = nullptr;		// Physical device
 	VkPhysicalDeviceProperties			gpuProps;	// Physical device attributes
     VkPhysicalDeviceMemoryProperties	memoryProperties;
 
