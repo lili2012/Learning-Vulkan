@@ -76,7 +76,7 @@ VkResult VulkanApplication::createVulkanInstance( std::vector<const char *>& lay
 // 8. Create the logical device, connect it to the graphics queue.
 
 // High level function for creating device and queues
-VkResult VulkanApplication::handShakeWithDevice(VkPhysicalDevice* gpu, std::vector<const char *>& layers, std::vector<const char *>& extensions )
+VkResult VulkanApplication::handShakeWithDevice(VkPhysicalDevice gpu, std::vector<const char *>& layers, std::vector<const char *>& extensions )
 {
 
 	// The user define Vulkan Device object this will manage the
@@ -90,10 +90,10 @@ VkResult VulkanApplication::handShakeWithDevice(VkPhysicalDevice* gpu, std::vect
 	deviceObj->layerExtension.getDeviceExtensionProperties(gpu);
 
 	// Get the physical device or GPU properties
-	vkGetPhysicalDeviceProperties(*gpu, &deviceObj->gpuProps);
+	vkGetPhysicalDeviceProperties(gpu, &deviceObj->gpuProps);
 
 	// Get the memory properties from the physical device or GPU.
-	vkGetPhysicalDeviceMemoryProperties(*gpu, &deviceObj->memoryProperties);
+	vkGetPhysicalDeviceMemoryProperties(gpu, &deviceObj->memoryProperties);
 
 	// Query the availabe queues on the physical device and their properties.
 	deviceObj->getPhysicalDeviceQueuesAndProperties();
@@ -103,6 +103,24 @@ VkResult VulkanApplication::handShakeWithDevice(VkPhysicalDevice* gpu, std::vect
 
 	// Create Logical Device, ensure that this device is connecte to graphics queue
 	return deviceObj->createDevice(layers, extensions);
+}
+
+//https://gamedev.stackexchange.com/questions/124738/how-to-select-the-most-powerful-vkdevice
+static int getMostPowerfullDevice(const std::vector<VkPhysicalDevice>& gpuList){
+	for (size_t i =0; i < gpuList.size(); i++)
+	{
+		const auto& device = gpuList[i];
+		auto props = VkPhysicalDeviceProperties{};
+		vkGetPhysicalDeviceProperties(device, &props);
+
+		// Determine the type of the physical device
+		if (props.deviceType == VkPhysicalDeviceType::VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
+		{
+			// You've got yourself a discrete GPU. (ideal)
+			return i;
+		}
+	}
+	return 0;
 }
 
 VkResult VulkanApplication::enumeratePhysicalDevices(std::vector<VkPhysicalDevice>& gpuList)
@@ -138,12 +156,14 @@ void VulkanApplication::initialize()
 	}
 
 	// Get the list of physical devices on the system
+	std::vector<VkPhysicalDevice> gpuList;
 	enumeratePhysicalDevices(gpuList);
 
+	if(gpuList.size() == 0)
+		return;
 	// This example use only one device which is available first.
-	if (gpuList.size() > 0) {
-		handShakeWithDevice(&gpuList[0], layerNames, deviceExtensionNames);
-	}
+	int device = getMostPowerfullDevice(gpuList);
+	handShakeWithDevice(gpuList[device], layerNames, deviceExtensionNames);
 
 	if (!rendererObj) {
 		rendererObj = new VulkanRenderer(this, deviceObj);
@@ -169,7 +189,7 @@ void VulkanApplication::resize()
 	rendererObj->destroyCommandPool();
 	rendererObj->destroyPipeline();
 	rendererObj->getPipelineObject()->destroyPipelineCache();
-	for each (VulkanDrawable* drawableObj in *rendererObj->getDrawingItems())
+	for(VulkanDrawable* drawableObj : *rendererObj->getDrawingItems())
 	{
 		drawableObj->destroyDescriptor();
 	}
@@ -192,7 +212,7 @@ void VulkanApplication::deInitialize()
 	// Destroy the associate pipeline cache
 	rendererObj->getPipelineObject()->destroyPipelineCache();
 
-	for each (VulkanDrawable* drawableObj in *rendererObj->getDrawingItems())
+	for(VulkanDrawable* drawableObj : *rendererObj->getDrawingItems())
 	{
 		drawableObj->destroyDescriptor();
 	}

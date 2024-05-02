@@ -24,6 +24,8 @@
 */
 
 #include "Wrappers.h"
+#include <filesystem>
+#include <iostream>
 
 void CommandBufferMgr::allocCommandBuffer(const VkDevice* device, const VkCommandPool cmdPool, VkCommandBuffer* cmdBuf, const VkCommandBufferAllocateInfo* commandBufferInfo)
 {
@@ -44,7 +46,7 @@ void CommandBufferMgr::allocCommandBuffer(const VkDevice* device, const VkComman
 	cmdInfo.pNext		= NULL;
 	cmdInfo.commandPool = cmdPool;
 	cmdInfo.level		= VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	cmdInfo.commandBufferCount = (uint32_t) sizeof(cmdBuf) / sizeof(VkCommandBuffer);;
+	cmdInfo.commandBufferCount = 1; //(uint32_t) sizeof(cmdBuf) / sizeof(VkCommandBuffer);;
 
 	result = vkAllocateCommandBuffers(*device, &cmdInfo, cmdBuf);
 	assert(!result);
@@ -128,6 +130,9 @@ void* readFile(const char *spvFileName, size_t *fileSize) {
 
 	FILE *fp = fopen(spvFileName, "rb");
 	if (!fp) {
+		std::filesystem::path cwd = std::filesystem::current_path();
+		std::cout << cwd.string();
+		std::cout<<"Error "<< strerror(errno)<< std::endl;
 		return NULL;
 	}
 

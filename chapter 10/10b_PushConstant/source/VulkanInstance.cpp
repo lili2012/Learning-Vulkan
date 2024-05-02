@@ -39,12 +39,12 @@ VkResult VulkanInstance::createInstance(std::vector<const char *>& layers, std::
 	appInfo.pEngineName			= appName;
 	appInfo.engineVersion		= 1;
 	// VK_API_VERSION is now deprecated, use VK_MAKE_VERSION instead.
-	appInfo.apiVersion			= VK_MAKE_VERSION(1, 0, 0);
+	appInfo.apiVersion			= VK_MAKE_VERSION(1, 3, 268);
 
 	// Define the Vulkan instance create info structure 
 	VkInstanceCreateInfo instInfo	= {};
 	instInfo.sType					= VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-	instInfo.pNext					= &layerExtension.dbgReportCreateInfo;
+	instInfo.pNext					= NULL; //&layerExtension.dbgReportCreateInfo;
 	instInfo.flags					= 0;
 	instInfo.pApplicationInfo		= &appInfo;
 

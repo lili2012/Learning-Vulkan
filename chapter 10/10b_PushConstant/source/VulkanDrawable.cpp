@@ -24,7 +24,7 @@
 */
 
 #include "VulkanDrawable.h"
-
+#include "string.h"
 #include "VulkanApplication.h"
 
 VulkanDrawable::VulkanDrawable(VulkanRenderer* parent) {
@@ -357,6 +357,22 @@ void VulkanDrawable::destroyUniformBuffer()
 	vkFreeMemory(rendererObj->getDevice()->device, UniformData.memory, NULL);
 }
 
+enum ColorFlag {
+	RED			= 1,
+	GREEN		= 2,
+	BLUE		= 3,
+	MIXED_COLOR = 4,
+};
+
+struct PushConstants{
+	ColorFlag constColorRGBFlag;
+	float mixerValue;
+};
+PushConstants pushConstants={
+	RED,
+	0.3f
+};
+
 void VulkanDrawable::recordCommandBuffer(int currentImage, VkCommandBuffer* cmdDraw)
 {
 	VulkanDevice* deviceObj			= rendererObj->getDevice();
@@ -389,6 +405,9 @@ void VulkanDrawable::recordCommandBuffer(int currentImage, VkCommandBuffer* cmdD
 	// Start recording the render pass instance
 	vkCmdBeginRenderPass(*cmdDraw, &renderPassBegin, VK_SUBPASS_CONTENTS_INLINE);
 
+	//pushConstants.constColorRGBFlag	= (ColorFlag)((pushConstants.constColorRGBFlag+1)%4+1);
+	pushConstants.mixerValue			= 0.3f;
+
 	// Bound the command buffer with the graphics pipeline
 	vkCmdBindPipeline(*cmdDraw, VK_PIPELINE_BIND_POINT_GRAPHICS, *pipeline);
 	vkCmdBindDescriptorSets(*cmdDraw, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout,
@@ -403,6 +422,7 @@ void VulkanDrawable::recordCommandBuffer(int currentImage, VkCommandBuffer* cmdD
 	// Define the scissoring 
 	initScissors(cmdDraw);
 
+	vkCmdPushConstants(*cmdDraw, pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(pushConstants), &pushConstants);
 	// Issue the draw command 6 faces consisting of 2 triangles each with 3 vertices.
 	vkCmdDraw(*cmdDraw, 3 * 2 * 6, 1, 0, 0);
 

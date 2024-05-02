@@ -1,0 +1,32 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "request": "launch", 
+            "type": "cppdbg",
+            "program": "10a_Uniforms_And_Descriptors.exe",
+            "name": "ch10a",
+            "cwd": "${workspaceFolder}/binaries",
+            "stopAtEntry": false,
+            "externalConsole": false,
+            "windows": {
+                "type": "cppvsdbg",
+            },
+            "linux": {
+                "type": "cppdbg",
+                "setupCommands": [
+                    {
+                        "description": "Test",
+                        "text": "python import sys;sys.path.insert(0, '/usr/share/gcc/python');from libstdcxx.v6.printers import register_libstdcxx_printers;register_libstdcxx_printers(None)",
+                        "ignoreFailures": false
+                    },
+                    {
+                        "description": "Enable pretty-printing for gdb",
+                        "text": "-enable-pretty-printing",
+                        "ignoreFailures": true
+                    }
+                ]
+            }
+        }
+    ]
+}

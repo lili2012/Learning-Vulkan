@@ -49,13 +49,10 @@ public:
 	void prepare();
 	void update();
 	bool render();
-
+	
 	// Create an empty window
-	void createPresentationWindow(const int& windowWidth = 500, const int& windowHeight = 500);
+	void createPresentationWindow(int windowWidth = 500, int windowHeight = 500);
 	void setImageLayout(VkImage image, VkImageAspectFlags aspectMask, VkImageLayout oldImageLayout, VkImageLayout newImageLayout, VkAccessFlagBits srcAccessMask, const VkCommandBuffer& cmdBuf);
-
-	//! Windows procedure method for handling events.
-	static LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 	// Destroy the presentation window
 	void destroyPresentationWindow();

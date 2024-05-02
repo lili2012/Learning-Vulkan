@@ -49,13 +49,10 @@ public:
 	void prepare();
 	void update();
 	bool render();
-
+	
 	// Create an empty window
-	void createPresentationWindow(const int& windowWidth = 500, const int& windowHeight = 500);
+	void createPresentationWindow(int windowWidth = 500, int windowHeight = 500);
 	void setImageLayout(VkImage image, VkImageAspectFlags aspectMask, VkImageLayout oldImageLayout, VkImageLayout newImageLayout, VkAccessFlagBits srcAccessMask, const VkCommandBuffer& cmdBuf);
-
-	//! Windows procedure method for handling events.
-	static LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 	// Destroy the presentation window
 	void destroyPresentationWindow();
@@ -78,7 +75,7 @@ public:
 	void createShaders();
 	void createPipelineStateManagement();
 	void createDescriptors();
-	void createPushConstants();
+	//void createPushConstants();
 
 	void destroyCommandBuffer();
 	void destroyCommandPool();
@@ -121,7 +118,7 @@ public:
 
 	int					width, height;
 
-private:
+public:
 	VulkanApplication* application;
 	// The device object associated with this Presentation layer.
 	VulkanDevice*	   deviceObj;

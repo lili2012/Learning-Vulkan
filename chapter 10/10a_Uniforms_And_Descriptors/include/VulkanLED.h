@@ -51,10 +51,10 @@ public:
 	VkResult getInstanceLayerProperties();
 	
 	// Global extensions
-	VkResult getExtensionProperties(LayerProperties &layerProps, VkPhysicalDevice* gpu = NULL);
+	VkResult getExtensionProperties(LayerProperties &layerProps, VkPhysicalDevice gpu = NULL);
 
 	// Device based extensions
-	VkResult getDeviceExtensionProperties(VkPhysicalDevice* gpu);
+	VkResult getDeviceExtensionProperties(VkPhysicalDevice gpu);
 
 	/******* VULKAN DEBUGGING MEMBER FUNCTION AND VARAIBLES *******/
 	VkBool32 areLayersSupported(std::vector<const char *> &layerNames);

@@ -24,7 +24,7 @@
 */
 
 #include "VulkanDrawable.h"
-
+#include "string.h"
 #include "VulkanApplication.h"
 
 VulkanDrawable::VulkanDrawable(VulkanRenderer* parent) {

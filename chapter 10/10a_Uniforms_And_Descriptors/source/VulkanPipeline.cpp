@@ -55,9 +55,10 @@ void VulkanPipeline::createPipelineCache()
 
 bool VulkanPipeline::createPipeline(VulkanDrawable* drawableObj, VkPipeline* pipeline, VulkanShader* shaderObj, VkBool32 includeDepth, VkBool32 includeVi)
 {
-	// Initialize the dynamic states, initially it’s empty
-	VkDynamicState dynamicStateEnables[VK_DYNAMIC_STATE_RANGE_SIZE];
-	memset(dynamicStateEnables, 0, sizeof dynamicStateEnables);
+	// Specify the dynamic state count and VkDynamicState enum stating which 
+	// dynamic state will use the values from dynamic state commands rather
+	// than from the pipeline state creation info.
+	VkDynamicState dynamicStateEnables[]={VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
 
 	// Specify the dynamic state information to pipeline through
 	// VkPipelineDynamicStateCreateInfo control structure.
@@ -65,7 +66,7 @@ bool VulkanPipeline::createPipeline(VulkanDrawable* drawableObj, VkPipeline* pip
 	dynamicState.sType				= VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
 	dynamicState.pNext				= NULL;
 	dynamicState.pDynamicStates		= dynamicStateEnables;
-	dynamicState.dynamicStateCount	= 0;
+	dynamicState.dynamicStateCount	= static_cast<uint32_t>(std::size(dynamicStateEnables));
 
 	VkPipelineVertexInputStateCreateInfo vertexInputStateInfo = {};
 	vertexInputStateInfo.sType							= VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -133,12 +134,6 @@ bool VulkanPipeline::createPipeline(VulkanDrawable* drawableObj, VkPipeline* pip
 	viewportStateInfo.scissorCount							= NUMBER_OF_SCISSORS;
 	viewportStateInfo.pScissors								= NULL;
 	viewportStateInfo.pViewports							= NULL;
-
-	// Specify the dynamic state count and VkDynamicState enum stating which 
-	// dynamic state will use the values from dynamic state commands rather
-	// than from the pipeline state creation info.
-	dynamicStateEnables[dynamicState.dynamicStateCount++] = VK_DYNAMIC_STATE_VIEWPORT;
-	dynamicStateEnables[dynamicState.dynamicStateCount++] = VK_DYNAMIC_STATE_SCISSOR;
 
 	VkPipelineDepthStencilStateCreateInfo depthStencilStateInfo = {};
 	depthStencilStateInfo.sType								= VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
