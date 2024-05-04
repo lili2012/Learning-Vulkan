@@ -49,13 +49,10 @@ public:
 	void prepare();
 	void update();
 	bool render();
-
+	
 	// Create an empty window
-	void createPresentationWindow(const int& windowWidth = 500, const int& windowHeight = 500);
+	void createPresentationWindow(int windowWidth = 500, int windowHeight = 500);
 	void setImageLayout(VkImage image, VkImageAspectFlags aspectMask, VkImageLayout oldImageLayout, VkImageLayout newImageLayout, const VkImageSubresourceRange& subresourceRange, const VkCommandBuffer& cmdBuf);
-
-	//! Windows procedure method for handling events.
-	static LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 	// Destroy the presentation window
 	void destroyPresentationWindow();
@@ -115,8 +112,9 @@ public:
 	VkCommandBuffer		cmdDepthImage;			// Command buffer for depth image layout
 	VkCommandPool		cmdPool;				// Command pool
 	VkCommandBuffer		cmdVertexBuffer;		// Command buffer for vertex buffer - Triangle geometry
-	VkCommandBuffer		cmdTexture;				// Command buffer for creating the texture
-
+	VkCommandBuffer		cmdTexture;	
+	VkCommandBuffer		cmdPushConstant;		// Command buffer for push constants
+	
 	VkRenderPass		renderPass;				// Render pass created object
 	std::vector<VkFramebuffer> framebuffers;	// Number of frame buffer corresponding to each swap chain
 	std::vector<VkPipeline*> pipelineList;		// List of pipelines
@@ -124,7 +122,7 @@ public:
 	int					width, height;
 	TextureData			texture;
 
-private:
+public:
 	VulkanApplication* application;
 	// The device object associated with this Presentation layer.
 	VulkanDevice*	   deviceObj;
