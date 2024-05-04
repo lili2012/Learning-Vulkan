@@ -27,13 +27,21 @@
 #include "VulkanApplication.h"
 #include "Wrappers.h"
 #include "MeshData.h"
+#include "string.h"
+#if defined(__linux__)
+#include <xcb/xcb.h>
+#endif
 
 VulkanRenderer::VulkanRenderer(VulkanApplication * app, VulkanDevice* deviceObject)
 {
-	// Note: It's very important to initilize the member with 0 or respective value other wise it will break the system
-	memset(&Depth, 0, sizeof(Depth));
-	memset(&connection, 0, sizeof(HINSTANCE));				// hInstance - Windows Instance
+	assert(app != NULL);
+	assert(deviceObject != NULL);
 
+	// Note: It's very important to initilize the member with 0 or respective value other wise it will break the system
+	Depth={VK_FORMAT_UNDEFINED,0,0,0};
+#ifdef _WIN32	
+	memset(&connection, 0, sizeof(HINSTANCE));				// hInstance - Windows Instance
+#endif
 	application = app;
 	deviceObj	= deviceObject;
 
@@ -46,7 +54,7 @@ VulkanRenderer::~VulkanRenderer()
 {
 	delete swapChainObj;
 	swapChainObj = NULL;
-	for each(auto d in drawableList)
+	for(auto d :drawableList)
 	{
 		delete d;
 	}
@@ -80,7 +88,7 @@ void VulkanRenderer::initialize()
 	createTextureLinear(filename, &texture, VK_IMAGE_USAGE_SAMPLED_BIT);
 
 	// Set the created texture in the drawable object.
-	for each (VulkanDrawable* drawableObj in drawableList)
+	for(VulkanDrawable* drawableObj : drawableList)
 	{
 		drawableObj->setTextures(&texture);
 	}
@@ -90,41 +98,27 @@ void VulkanRenderer::initialize()
 
 	// Manage the pipeline state objects
 	createPipelineStateManagement();
+
 }
 
 void VulkanRenderer::prepare()
 {
-	for each (VulkanDrawable* drawableObj in drawableList)
+	for(VulkanDrawable* drawableObj : drawableList)
 	{
 		drawableObj->prepare();
 	}
 }
-
 void VulkanRenderer::update()
 {
-	for each (VulkanDrawable* drawableObj in drawableList)
+	for(VulkanDrawable* drawableObj : drawableList)
 	{
 		drawableObj->update();
 	}
 }
 
-bool VulkanRenderer::render()
-{
-	MSG msg;   // message
-	PeekMessage(&msg, NULL, 0, 0, PM_REMOVE);
-	if (msg.message == WM_QUIT) {
-		return false;
-	}
-	TranslateMessage(&msg);
-	DispatchMessage(&msg);
-	RedrawWindow(window, NULL, NULL, RDW_INTERNALPAINT);
-	return true;
-}
-
 #ifdef _WIN32
-
 // MS-Windows event handling function:
-LRESULT CALLBACK VulkanRenderer::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+static LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	VulkanApplication* appObj = VulkanApplication::GetInstance();
 	switch (uMsg)
@@ -133,7 +127,7 @@ LRESULT CALLBACK VulkanRenderer::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LP
 		PostQuitMessage(0);
 		break;
 	case WM_PAINT:
-		for each (VulkanDrawable* drawableObj in appObj->rendererObj->drawableList)
+		for(VulkanDrawable* drawableObj : appObj->rendererObj->drawableList)
 		{
 			drawableObj->render();
 		}
@@ -154,10 +148,68 @@ LRESULT CALLBACK VulkanRenderer::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LP
 	}
 	return (DefWindowProc(hWnd, uMsg, wParam, lParam));
 }
+#else
 
-void VulkanRenderer::createPresentationWindow(const int& windowWidth, const int& windowHeight)
+static bool eventHandler(xcb_generic_event_t *e){
+	switch(e->response_type & ~0x80 ) {
+
+      /* Respond to key presses */
+      case XCB_KEY_PRESS:
+        printf("Keycode: %d\n", ((xcb_key_press_event_t*)e)->detail);
+        return false;
+
+      /* Respond to button presses */
+      case XCB_BUTTON_PRESS:
+        printf("Button pressed: %u\n", ((xcb_button_press_event_t*)e)->detail);
+        printf("X-coordinate: %u\n", ((xcb_button_press_event_t*)e)->event_x);
+        printf("Y-coordinate: %u\n", ((xcb_button_press_event_t*)e)->event_y);
+        return false;
+      case XCB_EXPOSE:
+        return false;
+	case XCB_CLIENT_MESSAGE:
+	{
+		printf("Y-coordinate: %u\n", ((xcb_client_message_event_t*)e)->data.data32[0]);
+    	//if(( == (*reply2).atom) 
+		return true;
+	}
+    }
+	// if ((e->response_type & ~0x80) == XCB_EXPOSE)
+	// 	return true;
+	return false;
+}
+#endif
+
+bool VulkanRenderer::render()
 {
 #ifdef _WIN32
+	MSG msg;   // message
+	PeekMessage(&msg, NULL, 0, 0, PM_REMOVE);
+	if (msg.message == WM_QUIT) {
+		return false;
+	}
+	TranslateMessage(&msg);
+	DispatchMessage(&msg);
+	RedrawWindow(window, NULL, NULL, RDW_INTERNALPAINT);
+#else
+	while (xcb_generic_event_t *e = xcb_wait_for_event(connection)) {
+		bool exitEventLoop = eventHandler(e);
+		free(e);
+		if(exitEventLoop){
+			xcb_destroy_window(connection, window);
+			return false;
+		}
+			
+	}
+#endif
+	return true;
+}
+
+#ifdef _WIN32
+
+
+void VulkanRenderer::createPresentationWindow(int windowWidth, int windowHeight)
+{
+
 	width	= windowWidth;
 	height	= windowHeight; 
 	assert(width > 0 || height > 0);
@@ -182,6 +234,7 @@ void VulkanRenderer::createPresentationWindow(const int& windowWidth, const int&
 
 	// Register window class:
 	if (!RegisterClassEx(&winInfo)) {
+		DWORD error = GetLastError();
 		// It didn't work, so try to give a useful error:
 		printf("Unexpected error trying to start the application!\n");
 		fflush(stdout);
@@ -213,43 +266,38 @@ void VulkanRenderer::createPresentationWindow(const int& windowWidth, const int&
 	}
 
 	SetWindowLongPtr(window, GWLP_USERDATA, (LONG_PTR)&application);
-#else
-	const xcb_setup_t *setup;
-	xcb_screen_iterator_t iter;
-	int scr;
 
-	connection = xcb_connect(NULL, &scr);
-	if (connection == NULL) {
-		std::cout << "Cannot find a compatible Vulkan ICD.\n";
-		exit(-1);
-	}
 
-	setup = xcb_get_setup(connection);
-	iter = xcb_setup_roots_iterator(setup);
-	while (scr-- > 0)
-		xcb_screen_next(&iter);
-
-	screen = iter.data;
-#endif // _WIN32
 }
 
 void VulkanRenderer::destroyPresentationWindow()
 {
 	DestroyWindow(window);
 }
-#else
-void VulkanRenderer::createPresentationWindow()
+#else // _WIN32
+
+void VulkanRenderer::createPresentationWindow(int windowWidth, int windowHeight)
 {
-	assert(width > 0);
-	assert(height > 0);
+	width	= windowWidth;
+	height	= windowHeight; 
+	assert(width > 0 || height > 0);
 
 	uint32_t value_mask, value_list[32];
+
+	int screenp = 0;
+	connection = xcb_connect(NULL, &screenp);
+	if (xcb_connection_has_error(connection))
+     printf("Failed to connect to X server using XCB.");
+
+	const xcb_setup_t* setup = xcb_get_setup(connection);
+	xcb_screen_t* screen = xcb_setup_roots_iterator(setup).data;
+	printf("Screen dimensions: %d, %d\n", screen->width_in_pixels, screen->height_in_pixels);
 
 	window = xcb_generate_id(connection);
 
 	value_mask = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
 	value_list[0] = screen->black_pixel;
-	value_list[1] = XCB_EVENT_MASK_KEY_RELEASE | XCB_EVENT_MASK_EXPOSURE;
+	value_list[1] = XCB_EVENT_MASK_EXPOSURE | XCB_EVENT_MASK_KEY_PRESS| XCB_EVENT_MASK_BUTTON_PRESS ;
 
 	xcb_create_window(connection, XCB_COPY_FROM_PARENT, window, screen->root, 0, 0, width, height, 0, 
 		XCB_WINDOW_CLASS_INPUT_OUTPUT, screen->root_visual, value_mask, value_list);
@@ -259,10 +307,11 @@ void VulkanRenderer::createPresentationWindow()
 	xcb_intern_atom_reply_t* reply = xcb_intern_atom_reply(connection, cookie, 0);
 
 	xcb_intern_atom_cookie_t cookie2 = xcb_intern_atom(connection, 0, 16, "WM_DELETE_WINDOW");
-	reply = xcb_intern_atom_reply(connection, cookie2, 0);
+	xcb_intern_atom_reply_t* reply2 = xcb_intern_atom_reply(connection, cookie2, 0);
 
-	xcb_change_property(connection, XCB_PROP_MODE_REPLACE, window, (*reply).atom, 4, 32, 1,	&(*reply).atom);
+	xcb_change_property(connection, XCB_PROP_MODE_REPLACE, window, (*reply).atom, 4, 32, 1,	&(*reply2).atom);
 	free(reply);
+	free(reply2);
 
 	xcb_map_window(connection, window);
 
@@ -270,21 +319,14 @@ void VulkanRenderer::createPresentationWindow()
 	const uint32_t coords[] = { 100,  100 };
 	xcb_configure_window(connection, window, XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y, coords);
 	xcb_flush(connection);
-
-	xcb_generic_event_t *e;
-	while ((e = xcb_wait_for_event(connection))) {
-		if ((e->response_type & ~0x80) == XCB_EXPOSE)
-			break;
-	}
 }
 
-void VulkanRenderer::destroyWindow()
+void VulkanRenderer::destroyPresentationWindow()
 {
 	xcb_destroy_window(connection, window);
 	xcb_disconnect(connection);
 }
-
-#endif // _WIN32
+#endif
 
 void VulkanRenderer::createCommandPool()
 {
@@ -315,6 +357,19 @@ void VulkanRenderer::createDepthImage()
 	}
 
 	const VkFormat depthFormat = Depth.format;
+
+	VkFormatProperties props;
+	vkGetPhysicalDeviceFormatProperties(deviceObj->gpu, depthFormat, &props);
+	if (props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+		imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+	}
+	else if (props.linearTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+		imageInfo.tiling = VK_IMAGE_TILING_LINEAR;
+	}
+	else {
+		std::cout << "Unsupported Depth Format, try other Depth formats.\n";
+		exit(-1);
+	}
 
 	imageInfo.sType			= VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 	imageInfo.pNext			= NULL;
@@ -507,7 +562,7 @@ void VulkanRenderer::createTextureLinear(const char* filename, TextureData *text
 	subresourceRange.levelCount					= texture->mipMapLevels;
 	subresourceRange.layerCount					= 1;
 
-	texture->imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	texture->imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 	setImageLayout(texture->image, VK_IMAGE_ASPECT_COLOR_BIT,
 		VK_IMAGE_LAYOUT_PREINITIALIZED, texture->imageLayout,
 		subresourceRange, cmdTexture);
@@ -708,7 +763,7 @@ void VulkanRenderer::destroyRenderpass()
 
 void VulkanRenderer::destroyDrawableVertexBuffer()
 {
-	for each (VulkanDrawable* drawableObj in drawableList)
+	for(VulkanDrawable* drawableObj : drawableList)
 	{
 		drawableObj->destroyVertexBuffer();
 	}
@@ -716,7 +771,7 @@ void VulkanRenderer::destroyDrawableVertexBuffer()
 
 void VulkanRenderer::destroyDrawableUniformBuffer()
 {
-	for each (VulkanDrawable* drawableObj in drawableList)
+	for(VulkanDrawable* drawableObj : drawableList)
 	{
 		drawableObj->destroyUniformBuffer();
 	}
@@ -732,7 +787,7 @@ void VulkanRenderer::destroyTextureResource()
 
 void VulkanRenderer::destroyDrawableCommandBuffer()
 {
-	for each (VulkanDrawable* drawableObj in drawableList)
+	for(VulkanDrawable* drawableObj : drawableList)
 	{
 		drawableObj->destroyCommandBuffer();
 	}
@@ -740,7 +795,7 @@ void VulkanRenderer::destroyDrawableCommandBuffer()
 
 void VulkanRenderer::destroyDrawableSynchronizationObjects()
 {
-	for each (VulkanDrawable* drawableObj in drawableList)
+	for(VulkanDrawable* drawableObj : drawableList)
 	{
 		drawableObj->destroySynchronizationObjects();
 	}
@@ -783,7 +838,7 @@ void VulkanRenderer::createVertexBuffer()
 	CommandBufferMgr::allocCommandBuffer(&deviceObj->device, cmdPool, &cmdVertexBuffer);
 	CommandBufferMgr::beginCommandBuffer(cmdVertexBuffer);
 
-	for each (VulkanDrawable* drawableObj in drawableList)
+	for(VulkanDrawable* drawableObj : drawableList)
 	{
 		drawableObj->createVertexBuffer(geometryData, sizeof(geometryData), sizeof(geometryData[0]), false);
 	}
@@ -810,12 +865,13 @@ void VulkanRenderer::createShaders()
 
 	shaderObj.buildShaderModuleWithSPV((uint32_t*)vertShaderCode, sizeVert, (uint32_t*)fragShaderCode, sizeFrag);
 #endif
+	free(vertShaderCode);
+	free(fragShaderCode);
 }
-
 // Create the descriptor set
 void VulkanRenderer::createDescriptors()
 {
-	for each (VulkanDrawable* drawableObj in drawableList)
+	for(VulkanDrawable* drawableObj : drawableList)
 	{
 		// It is upto an application how it manages the 
 		// creation of descriptor. Descriptors can be cached 
@@ -825,12 +881,11 @@ void VulkanRenderer::createDescriptors()
 		// Create the descriptor set
 		drawableObj->createDescriptor(true);
 	}
-
 }
 
 void VulkanRenderer::createPipelineStateManagement()
 {
-	for each (VulkanDrawable* drawableObj in drawableList)
+	for(VulkanDrawable* drawableObj : drawableList)
 	{
 		// Use the descriptor layout and create the pipeline layout.
 		drawableObj->createPipelineLayout();
@@ -839,7 +894,7 @@ void VulkanRenderer::createPipelineStateManagement()
 	pipelineObj.createPipelineCache();
 
 	const bool depthPresent = true;
-	for each (VulkanDrawable* drawableObj in drawableList)
+	for(VulkanDrawable* drawableObj : drawableList)
 	{
 		VkPipeline* pipeline = (VkPipeline*)malloc(sizeof(VkPipeline));
 		if (pipelineObj.createPipeline(drawableObj, pipeline, &shaderObj, depthPresent))
@@ -872,56 +927,38 @@ void VulkanRenderer::setImageLayout(VkImage image, VkImageAspectFlags aspectMask
 	imgMemoryBarrier.newLayout		= newImageLayout;
 	imgMemoryBarrier.image			= image;
 	imgMemoryBarrier.subresourceRange = subresourceRange;
-
-	if (oldImageLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) {
-		imgMemoryBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-	}
-
-	// Source layouts (old)
-	switch (oldImageLayout)
-	{
-		case VK_IMAGE_LAYOUT_UNDEFINED:
-			imgMemoryBarrier.srcAccessMask = 0;
-			break;
-		case VK_IMAGE_LAYOUT_PREINITIALIZED:
-			imgMemoryBarrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
-			break;
-		case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
-			imgMemoryBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-			break;
-		case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-			imgMemoryBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-	}
-
-	switch (newImageLayout)
-	{
-	// Ensure that anything that was copying from this image has completed
-	// An image in this layout can only be used as the destination operand of the commands
-	case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
-	case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
-		imgMemoryBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-		break;
-
-	// Ensure any Copy or CPU writes to image are flushed
-	// An image in this layout can only be used as a read-only shader resource
-	case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
-		imgMemoryBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-		imgMemoryBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-		break;
-
-	// An image in this layout can only be used as a framebuffer color attachment
-	case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-		imgMemoryBarrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
-		break;
-
-	// An image in this layout can only be used as a framebuffer depth/stencil attachment
-	case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
-		imgMemoryBarrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-		break;
-	}
+	
 
 	VkPipelineStageFlags srcStages	= VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 	VkPipelineStageFlags destStages = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+	if(oldImageLayout == VK_IMAGE_LAYOUT_PREINITIALIZED&& newImageLayout == VK_IMAGE_LAYOUT_GENERAL){
+		imgMemoryBarrier.srcAccessMask = 0;
+		imgMemoryBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+		srcStages = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+		destStages = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+	}
+	else if (oldImageLayout == VK_IMAGE_LAYOUT_UNDEFINED && newImageLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
+		imgMemoryBarrier.srcAccessMask = 0;
+		imgMemoryBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+		srcStages = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+		destStages = VK_PIPELINE_STAGE_TRANSFER_BIT;
+	} else if (oldImageLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && newImageLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
+		imgMemoryBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+		imgMemoryBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+		srcStages = VK_PIPELINE_STAGE_TRANSFER_BIT;
+		destStages = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+	} else if (oldImageLayout == VK_IMAGE_LAYOUT_UNDEFINED && newImageLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
+		imgMemoryBarrier.srcAccessMask = 0;
+		imgMemoryBarrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+
+		srcStages = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+		destStages = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+	} else {
+		throw std::invalid_argument("unsupported layout transition!");
+	}
 
 	vkCmdPipelineBarrier(cmd, srcStages, destStages, 0, 0, NULL, 0, NULL, 1, &imgMemoryBarrier);
 }
@@ -929,7 +966,7 @@ void VulkanRenderer::setImageLayout(VkImage image, VkImageAspectFlags aspectMask
 // Destroy each pipeline object existing in the renderer
 void VulkanRenderer::destroyPipeline()
 {
-	for each (VkPipeline* pipeline in pipelineList)
+	for (VkPipeline* pipeline : pipelineList)
 	{
 		vkDestroyPipeline(deviceObj->device, *pipeline, NULL);
 		free(pipeline);

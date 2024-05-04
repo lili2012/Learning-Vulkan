@@ -107,7 +107,7 @@ VkResult VulkanSwapChain::createSurface()
 	createInfo.connection	= rendererObj->connection;
 	createInfo.window		= rendererObj->window;
 
-	result = vkCreateXcbSurfaceKHR(instance, &createInfo, NULL, &surface);
+	result = vkCreateXcbSurfaceKHR(instance, &createInfo, NULL, &scPublicVars.surface);
 #endif // _WIN32
 	
 	assert(result == VK_SUCCESS);
@@ -118,11 +118,12 @@ uint32_t VulkanSwapChain::getGraphicsQueueWithPresentationSupport()
 {
 	VulkanDevice* device	= appObj->deviceObj;
 	uint32_t queueCount		= device->queueFamilyCount;
-	VkPhysicalDevice gpu	= *device->gpu;
+	VkPhysicalDevice gpu	= device->gpu;
 	std::vector<VkQueueFamilyProperties>& queueProps = device->queueFamilyProps;
 
+	std::vector<VkBool32> supportsPresent;
+	supportsPresent.resize(queueCount);
 	// Iterate over each queue and get presentation status for each.
-	VkBool32* supportsPresent = (VkBool32 *)malloc(queueCount * sizeof(VkBool32));
 	for (uint32_t i = 0; i < queueCount; i++) {
 		fpGetPhysicalDeviceSurfaceSupportKHR(gpu, i, scPublicVars.surface, &supportsPresent[i]);
 	}
@@ -132,43 +133,25 @@ uint32_t VulkanSwapChain::getGraphicsQueueWithPresentationSupport()
 	uint32_t graphicsQueueNodeIndex = UINT32_MAX;
 	uint32_t presentQueueNodeIndex = UINT32_MAX;
 	for (uint32_t i = 0; i < queueCount; i++) {
-		if ((queueProps[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0) {
-			if (graphicsQueueNodeIndex == UINT32_MAX) {
-				graphicsQueueNodeIndex = i;
-			}
-
-			if (supportsPresent[i] == VK_TRUE) {
-				graphicsQueueNodeIndex = i;
-				presentQueueNodeIndex = i;
-				break;
-			}
+		if ((queueProps[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0 && supportsPresent[i]) {
+			return i;
 		}
 	}
 	
-	if (presentQueueNodeIndex == UINT32_MAX) {
-		// If didn't find a queue that supports both graphics and present, then
-		// find a separate present queue.
-		for (uint32_t i = 0; i < queueCount; ++i) {
-			if (supportsPresent[i] == VK_TRUE) {
-				presentQueueNodeIndex = i;
-				break;
-			}
+	// If didn't find a queue that supports both graphics and present, then
+	// find a separate present queue.
+	for (uint32_t i = 0; i < queueCount; ++i) {
+		if (supportsPresent[i] == VK_TRUE) {
+			return i;
 		}
 	}
 
-	free(supportsPresent);
-
-	// Generate error if could not find both a graphics and a present queue
-	if (graphicsQueueNodeIndex == UINT32_MAX || presentQueueNodeIndex == UINT32_MAX) {
-		return  UINT32_MAX;
-	}
-
-	return graphicsQueueNodeIndex;
+	return UINT32_MAX;
 }
 
 void VulkanSwapChain::getSupportedFormats()
 {
-	VkPhysicalDevice gpu = *rendererObj->getDevice()->gpu;
+	VkPhysicalDevice gpu = rendererObj->getDevice()->gpu;
 	VkResult  result;
 
 	// Get the list of VkFormats that are supported:
@@ -182,7 +165,7 @@ void VulkanSwapChain::getSupportedFormats()
 	result = fpGetPhysicalDeviceSurfaceFormatsKHR(gpu, scPublicVars.surface, &formatCount, &scPrivateVars.surfFormats[0]);
 	assert(result == VK_SUCCESS);
 
-	// In case it’s a VK_FORMAT_UNDEFINED, then surface has no 
+	// In case it's a VK_FORMAT_UNDEFINED, then surface has no 
 	// preferred format. We use BGRA 32 bit format
 	if (formatCount == 1 && scPrivateVars.surfFormats[0].format == VK_FORMAT_UNDEFINED)
 	{
@@ -218,6 +201,8 @@ void VulkanSwapChain::intializeSwapChain()
 
 void VulkanSwapChain::createSwapChain(const VkCommandBuffer& cmd)
 {
+	/* This function retreive swapchain image and create those images- image view */
+
 	// use extensions and get the surface capabilities, present mode
 	getSurfaceCapabilitiesAndPresentMode();
 
@@ -234,14 +219,13 @@ void VulkanSwapChain::createSwapChain(const VkCommandBuffer& cmd)
 void VulkanSwapChain::getSurfaceCapabilitiesAndPresentMode()
 {
 	VkResult  result;
-	VkPhysicalDevice gpu = *appObj->deviceObj->gpu;
+	VkPhysicalDevice gpu = appObj->deviceObj->gpu;
 	result = fpGetPhysicalDeviceSurfaceCapabilitiesKHR(gpu, scPublicVars.surface, &scPrivateVars.surfCapabilities);
 	assert(result == VK_SUCCESS);
 
 	result = fpGetPhysicalDeviceSurfacePresentModesKHR(gpu, scPublicVars.surface, &scPrivateVars.presentModeCount, NULL);
 	assert(result == VK_SUCCESS);
 
-	scPrivateVars.presentModes.clear();
 	scPrivateVars.presentModes.resize(scPrivateVars.presentModeCount);
 	assert(scPrivateVars.presentModes.size()>=1);
 
@@ -273,8 +257,7 @@ void VulkanSwapChain::managePresentMode()
 			scPrivateVars.swapchainPresentMode = VK_PRESENT_MODE_MAILBOX_KHR;
 			break;
 		}
-		if ((scPrivateVars.swapchainPresentMode != VK_PRESENT_MODE_MAILBOX_KHR) &&
-			(scPrivateVars.presentModes[i] == VK_PRESENT_MODE_IMMEDIATE_KHR)) {
+		if (scPrivateVars.presentModes[i] == VK_PRESENT_MODE_IMMEDIATE_KHR) {
 			scPrivateVars.swapchainPresentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
 		}
 	}

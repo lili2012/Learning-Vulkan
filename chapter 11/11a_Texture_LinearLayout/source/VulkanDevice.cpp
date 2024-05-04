@@ -27,7 +27,7 @@
 #include "VulkanInstance.h"
 #include "VulkanApplication.h"
 
-VulkanDevice::VulkanDevice(VkPhysicalDevice* physicalDevice) 
+VulkanDevice::VulkanDevice(VkPhysicalDevice physicalDevice) 
 {
 	gpu = physicalDevice;
 }
@@ -54,7 +54,7 @@ VkResult VulkanDevice::createDevice(std::vector<const char *>& layers, std::vect
 	queueInfo.pQueuePriorities			= queuePriorities;
 
 
-	vkGetPhysicalDeviceFeatures(*gpu, &deviceFeatures);
+	vkGetPhysicalDeviceFeatures(gpu, &deviceFeatures);
 
 	VkPhysicalDeviceFeatures setEnabledFeatures = {VK_FALSE};
 	setEnabledFeatures.samplerAnisotropy = deviceFeatures.samplerAnisotropy;
@@ -70,7 +70,7 @@ VkResult VulkanDevice::createDevice(std::vector<const char *>& layers, std::vect
 	deviceInfo.ppEnabledExtensionNames	= extensions.size() ? extensions.data() : NULL;
 	deviceInfo.pEnabledFeatures			= &setEnabledFeatures;
 
-	result = vkCreateDevice(*gpu, &deviceInfo, NULL, &device);
+	result = vkCreateDevice(gpu, &deviceInfo, NULL, &device);
 	assert(result == VK_SUCCESS);
 
 	return result;
@@ -96,13 +96,13 @@ bool VulkanDevice::memoryTypeFromProperties(uint32_t typeBits, VkFlags requireme
 void VulkanDevice::getPhysicalDeviceQueuesAndProperties()
 {
 	// Query queue families count with pass NULL as second parameter.
-	vkGetPhysicalDeviceQueueFamilyProperties(*gpu, &queueFamilyCount, NULL);
+	vkGetPhysicalDeviceQueueFamilyProperties(gpu, &queueFamilyCount, NULL);
 	
 	// Allocate space to accomodate Queue properties.
 	queueFamilyProps.resize(queueFamilyCount);
 
 	// Get queue family properties
-	vkGetPhysicalDeviceQueueFamilyProperties(*gpu, &queueFamilyCount, queueFamilyProps.data());
+	vkGetPhysicalDeviceQueueFamilyProperties(gpu, &queueFamilyCount, queueFamilyProps.data());
 }
 
 uint32_t VulkanDevice::getGraphicsQueueHandle()
